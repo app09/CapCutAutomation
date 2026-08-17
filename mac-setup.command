@@ -3,20 +3,14 @@
 #  CapCut Automation Studio — One-Click Mac Setup
 #
 #  SHARE ONLY THIS ONE FILE. The Mac user double-clicks it and
-#  everything happens automatically:
-#    1. Downloads the app source (git clone)
+#  everything happens automatically — NOTHING to pre-install:
+#    0. Installs a local copy of Node.js if it's missing (no admin)
+#    1. Downloads the app source (curl — no git needed)
 #    2. Installs dependencies
 #    3. Updates Electron (fixes the macOS XProtect false-positive)
 #    4. Builds the .dmg installer
 #    5. Installs the app into /Applications
 #    6. Launches it
-#
-#  REQUIREMENTS on the Mac:
-#    - Node.js LTS  ->  https://nodejs.org
-#    - git (macOS offers to install it automatically on first use)
-#
-#  IMPORTANT: the GitHub repo must be PUBLIC (or the person running
-#  this must have access), otherwise the download step cannot reach it.
 #
 #  First run, if double-click is blocked:  right-click -> Open -> Open.
 # ============================================================
@@ -24,47 +18,53 @@
 # Keep the Terminal window open so output/errors stay readable.
 trap 'echo ""; echo "Press Enter to close."; read -r _' EXIT
 set -e
+set -o pipefail
 
 # ---- Settings (change these if you fork/rename) ------------
-REPO_URL="https://github.com/app09/CapCutAutomation.git"
+SRC_TARBALL="https://github.com/app09/CapCutAutomation/archive/refs/heads/main.tar.gz"
 APP_NAME="CapCut Automation Studio"
 WORK_DIR="$HOME/.capcut-automation-studio-src"
+NODE_VER="v20.18.0"            # bundled fallback Node (LTS)
+NODE_DIR="$HOME/.capcut-node"
 # -----------------------------------------------------------
 
 echo "==================================================="
 echo "   $APP_NAME — One-Click Mac Setup"
 echo "==================================================="
 
-# ── 0. Requirements ─────────────────────────────────────────
-if ! command -v git >/dev/null 2>&1; then
-  echo "X  git not found. Triggering the Xcode Command Line Tools installer..."
-  xcode-select --install 2>/dev/null || true
-  echo "   Finish that install popup, then run this file again."
-  exit 1
-fi
+# ── 0. Make sure Node.js is available (auto-install locally) ─
 if ! command -v npm >/dev/null 2>&1; then
-  echo "X  Node.js / npm not found."
-  echo "   Install the LTS version from https://nodejs.org and run this again."
+  echo "-> Node.js not found — installing a local copy (no admin needed)..."
+  case "$(uname -m)" in
+    arm64)  NARCH="arm64" ;;
+    x86_64) NARCH="x64" ;;
+    *) echo "X  Unsupported CPU $(uname -m). Install Node LTS from https://nodejs.org and re-run."; exit 1 ;;
+  esac
+  NODE_URL="https://nodejs.org/dist/${NODE_VER}/node-${NODE_VER}-darwin-${NARCH}.tar.gz"
+  rm -rf "$NODE_DIR"; mkdir -p "$NODE_DIR"
+  if ! curl -fsSL "$NODE_URL" | tar -xz -C "$NODE_DIR" --strip-components=1; then
+    echo "X  Could not auto-install Node. Install LTS from https://nodejs.org and re-run."
+    exit 1
+  fi
+  export PATH="$NODE_DIR/bin:$PATH"
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+  echo "X  Node/npm still unavailable. Install LTS from https://nodejs.org and re-run."
   exit 1
 fi
-echo "OK  git $(git --version | awk '{print $3}'), Node $(node -v), npm $(npm -v)"
+echo "OK  Node $(node -v), npm $(npm -v)"
 
-# ── 1. Download / update the source ─────────────────────────
+# ── 1. Download the app source (no git required) ────────────
 echo ""
 echo "-> [1/6] Downloading the app source..."
-if [ -d "$WORK_DIR/.git" ]; then
-  git -C "$WORK_DIR" fetch --all --quiet
-  git -C "$WORK_DIR" reset --hard origin/main --quiet
-else
-  rm -rf "$WORK_DIR"
-  git clone --depth 1 "$REPO_URL" "$WORK_DIR"
-fi
+rm -rf "$WORK_DIR"; mkdir -p "$WORK_DIR"
+curl -fsSL "$SRC_TARBALL" | tar -xz -C "$WORK_DIR" --strip-components=1
 cd "$WORK_DIR"
 
 # ── 2. Dependencies ─────────────────────────────────────────
 echo ""
-echo "-> [2/6] Installing dependencies (fresh)..."
-rm -rf node_modules package-lock.json
+echo "-> [2/6] Installing dependencies..."
 npm install
 
 # ── 3. Auto-update Electron + builder ───────────────────────
