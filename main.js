@@ -4,13 +4,48 @@ const projectService = require('./src/project-service');
 
 let mainWindow;
 
+// Forward every main-process console line to the renderer's Log Panel.
+// Level: 'info' | 'warning' | 'error' | 'success'.
+function sendLogToWindow(level, message) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('app:log', { level, message, at: Date.now() });
+  }
+}
+
+// Patch console so existing [service]/[ipc] logging lands in the Log Panel too.
+const originalConsole = {
+  log: console.log.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console)
+};
+
+function stringifyArgs(args) {
+  return args
+    .map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
+    .join(' ');
+}
+
+console.log = (...args) => {
+  originalConsole.log(...args);
+  const message = stringifyArgs(args);
+  sendLogToWindow(/✓|done|created|restored/.test(message) ? 'success' : 'info', message);
+};
+console.warn = (...args) => {
+  originalConsole.warn(...args);
+  sendLogToWindow('warning', stringifyArgs(args));
+};
+console.error = (...args) => {
+  originalConsole.error(...args);
+  sendLogToWindow('error', stringifyArgs(args));
+};
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1360,
     height: 860,
     minWidth: 1100,
     minHeight: 700,
-    title: 'CapCut Subtitle Editor — by Shaniyal Malik',
+    title: 'CapCut Automation Studio',
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -151,10 +186,36 @@ app.whenReady().then(() => {
     });
   });
 
+  handle('projects:random-transitions', async (_event, payload = {}) => {
+    return projectService.applyRandomTransitions({
+      projectPath: validateProjectPath(payload.projectPath),
+      draftFileName: payload.draftFileName,
+      backupRoot: getBackupRoot()
+    });
+  });
+
   handle('projects:export-srt', async (_event, payload = {}) => {
     return projectService.exportSrt({
       projectPath: validateProjectPath(payload.projectPath),
       draftFileName: payload.draftFileName
+    });
+  });
+
+  handle('projects:audio-sync', async (_event, payload = {}) => {
+    return projectService.applyAudioSync({
+      projectPath: validateProjectPath(payload.projectPath),
+      draftFileName: payload.draftFileName,
+      backupRoot: getBackupRoot()
+    });
+  });
+
+  handle('capcut:kill', async () => {
+    return projectService.killCapCut();
+  });
+
+  handle('projects:clear-cache', async (_event, payload = {}) => {
+    return projectService.clearProjectCache({
+      projectPath: validateProjectPath(payload.projectPath)
     });
   });
 

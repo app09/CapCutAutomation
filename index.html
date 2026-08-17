@@ -4,76 +4,72 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CapCut Subtitle Editor — by Shaniyal Malik</title>
+    <title>CapCut Automation Studio</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Projects</p>
-            <h1>CapCut Subtitle Editor</h1>
-            <p class="brand-byline">by Shaniyal Malik</p>
-          </div>
-          <button id="refreshProjectsBtn" class="secondary-btn">Refresh Projects</button>
+        <div class="brand-block">
+          <p class="eyebrow">CapCut Suite</p>
+          <h1 class="brand-title">CapCut Automation Studio</h1>
+          <p class="brand-byline">by Shaniyal Malik</p>
         </div>
 
-        <div class="project-meta">
-          <span id="projectCount">0 projects</span>
-          <span id="scanInfo">Scanning default CapCut locations</span>
+        <div class="sidebar-projects-head">
+          <div class="project-meta">
+            <span id="projectCount">0 projects</span>
+            <span id="scanInfo">Scanning default CapCut locations</span>
+          </div>
+          <button id="refreshProjectsBtn" class="secondary-btn small-btn">&#8635; Refresh</button>
         </div>
 
         <div id="projectList" class="project-list"></div>
-
-        <div class="sidebar-footer">
-          <span class="sidebar-footer-brand">✦ Shaniyal Malik</span>
-        </div>
       </aside>
 
       <main class="main-panel">
-        <section class="toolbar">
+        <header class="selection-header">
           <div class="selection-summary">
             <p class="eyebrow">Selected Project</p>
             <h2 id="selectedProjectName">None selected</h2>
             <p id="selectedProjectPath" class="muted">Choose a project from the left panel.</p>
-          </div>
-
-          <div class="button-row">
-            <button id="extractCaptionsBtn" class="primary-btn" disabled>Extract Captions</button>
-            <button id="applyChangesBtn" class="primary-btn success" disabled>Apply Changes</button>
-            <button id="backupProjectBtn" class="secondary-btn" disabled>Backup Project</button>
-            <button id="restoreBackupBtn" class="secondary-btn danger" disabled>Restore Backup</button>
-          </div>
-        </section>
-
-        <section class="feature-bar">
-          <div class="feature-group">
-            <p class="eyebrow">Motion</p>
-            <div class="feature-controls">
-              <select id="animationPreset" class="select-input" disabled></select>
-              <button id="applyAnimationBtn" class="primary-btn" disabled>Apply to All Clips</button>
+            <div id="selectedProjectStats" class="project-stats-row" hidden>
+              <span class="stat-chip" id="statClips">0 clips</span>
+              <span class="stat-chip" id="statImages">0 images</span>
+              <span class="stat-chip" id="statVideos">0 videos</span>
+              <span class="stat-chip" id="statAudio">0 audio tracks</span>
+              <span class="stat-chip" id="statDuration">0:00</span>
             </div>
-            <p class="feature-hint">Adds a Ken Burns keyframe animation to every image and video clip.</p>
           </div>
+        </header>
 
-          <div class="feature-group">
-            <p class="eyebrow">Subtitles</p>
-            <div class="feature-controls">
-              <button id="exportSrtBtn" class="secondary-btn" disabled>&#8595; Export .srt</button>
+        <nav class="page-nav">
+          <button class="nav-tab active" data-page="captions"><span class="nav-ico">&#9998;</span> Captions</button>
+          <button class="nav-tab" data-page="image-sync"><span class="nav-ico">&#127912;</span> Image Sync with SRT</button>
+          <button class="nav-tab" data-page="audio-sync"><span class="nav-ico">&#9835;</span> Image Sync with Audio Cuts</button>
+          <button class="nav-tab" data-page="motion"><span class="nav-ico">&#127916;</span> Motion</button>
+          <button class="nav-tab" data-page="transitions"><span class="nav-ico">&#10022;</span> Transitions</button>
+          <button class="nav-tab" data-page="export"><span class="nav-ico">&#8595;</span> Export SRT</button>
+          <button class="nav-tab" data-page="backups"><span class="nav-ico">&#128452;</span> Backups</button>
+          <button class="nav-tab" data-page="tools"><span class="nav-ico">&#9874;</span> Tools</button>
+          <button class="nav-tab" data-page="logs"><span class="nav-ico">&#128203;</span> Logs</button>
+        </nav>
+
+        <div class="page-container">
+          <!-- ── Captions ─────────────────────────────────────── -->
+          <section class="page active" data-page="captions">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Captions</p>
+                <h3>Extract &amp; edit — one caption per line, same order as CapCut</h3>
+              </div>
+              <div class="page-actions">
+                <button id="extractCaptionsBtn" class="primary-btn" disabled>Extract Captions</button>
+                <button id="applyChangesBtn" class="primary-btn success" disabled>Apply Changes</button>
+              </div>
             </div>
-            <p class="feature-hint">Exports CapCut's subtitle track as a timestamped .srt file.</p>
-          </div>
 
-        </section>
-
-        <section class="editor-panel">
-          <div class="editor-header">
-            <div>
-              <p class="eyebrow">Editable Caption Text</p>
-              <h3>One caption per line, same order as CapCut</h3>
-            </div>
-            <div class="editor-actions">
+            <div class="editor-subbar">
               <div class="editor-stats">
                 <span id="captionCount">0 captions</span>
                 <span id="backupStatus">No backup action yet</span>
@@ -86,48 +82,174 @@
                 </label>
               </div>
             </div>
-          </div>
 
-          <textarea
-            id="captionEditor"
-            spellcheck="false"
-            placeholder="Select a CapCut project, then click Extract Captions..."
-          ></textarea>
-        </section>
+            <textarea
+              id="captionEditor"
+              spellcheck="false"
+              placeholder="Select a CapCut project, then click Extract Captions..."
+            ></textarea>
+          </section>
 
-        <section class="sync-panel">
-          <div class="editor-header">
-            <div>
-              <p class="eyebrow">Image Sync with Subtitle</p>
-              <h3>One subtitle block = one clip duration</h3>
-            </div>
-            <div class="editor-actions">
-              <div class="editor-file-btns">
+          <!-- ── Image Sync (SRT) ─────────────────────────────── -->
+          <section class="page" data-page="image-sync">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Image Sync with Subtitle</p>
+                <h3>One subtitle block = one clip duration</h3>
+              </div>
+              <div class="page-actions">
                 <label id="syncUploadLabel" class="secondary-btn small-btn upload-label disabled-label">
                   &#8593; Upload .srt
                   <input type="file" id="syncUploadInput" accept=".srt,text/plain" style="display:none" />
                 </label>
-                <button id="applyImageSyncBtn" class="primary-btn success small-btn" disabled>Apply Image Sync</button>
+                <button id="applyImageSyncBtn" class="primary-btn success" disabled>Apply Image Sync</button>
               </div>
             </div>
-          </div>
 
-          <p class="feature-hint sync-hint">
-            Independent of CapCut's own subtitles. Paste SRT-format text (with timestamps) or upload a
-            <code>.srt</code> file — each block retimes the matching image/clip. Your CapCut subtitle track is not touched.
-          </p>
+            <p class="feature-hint sync-hint">
+              Independent of CapCut's own subtitles. Paste SRT-format text (with timestamps) or upload a
+              <code>.srt</code> file — each block retimes the matching image/clip. Your CapCut subtitle track is not touched.
+            </p>
 
-          <textarea
-            id="syncEditor"
-            spellcheck="false"
-            placeholder="1&#10;00:00:00,000 --> 00:00:02,500&#10;First block&#10;&#10;2&#10;00:00:02,500 --> 00:00:05,000&#10;Second block"
-          ></textarea>
-        </section>
+            <textarea
+              id="syncEditor"
+              spellcheck="false"
+              placeholder="1&#10;00:00:00,000 --> 00:00:02,500&#10;First block&#10;&#10;2&#10;00:00:02,500 --> 00:00:05,000&#10;Second block"
+            ></textarea>
+          </section>
 
-        <div class="status-footer">
-          <section id="statusBar" class="status-bar info">Ready.</section>
-          <span class="status-brand">by Shaniyal Malik</span>
+          <!-- ── Audio Sync ───────────────────────────────────── -->
+          <section class="page" data-page="audio-sync">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Sync to Audio Cuts</p>
+                <h3>One audio cut = one clip duration</h3>
+              </div>
+              <div class="page-actions">
+                <button id="applyAudioSyncBtn" class="primary-btn" disabled>Sync to Audio Cuts</button>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <p class="feature-hint">
+                Retimes each image/video clip on the primary visual track to match the <strong>cuts on the project's
+                audio track</strong> — no SRT or upload needed. Split your audio into segments in CapCut (one segment per
+                clip you want), then click <strong>Sync to Audio Cuts</strong>.
+              </p>
+              <ul class="info-list">
+                <li>Reads timing straight from the audio track's segments (in order).</li>
+                <li>Photos take any length; real footage is capped at its source duration.</li>
+                <li>Extra clips beyond the audio cuts are laid out in sequence.</li>
+                <li>A full backup is created first, and CapCut must be closed.</li>
+              </ul>
+            </div>
+          </section>
+
+          <!-- ── Motion ───────────────────────────────────────── -->
+          <section class="page" data-page="motion">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Motion</p>
+                <h3>Ken Burns animation for every clip</h3>
+              </div>
+              <div class="page-actions">
+                <select id="animationPreset" class="select-input" disabled></select>
+                <button id="applyAnimationBtn" class="primary-btn" disabled>Apply to All Clips</button>
+              </div>
+            </div>
+            <div class="info-card">
+              <p class="feature-hint">Adds a Ken Burns keyframe animation (Zoom, Pan, Ken Burns, or Cycle) to every image and video clip on the project's video tracks. Existing scale/position keyframes are replaced; other keyframes are kept.</p>
+            </div>
+          </section>
+
+          <!-- ── Transitions ──────────────────────────────────── -->
+          <section class="page" data-page="transitions">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Transitions</p>
+                <h3>Randomly distribute your transitions</h3>
+              </div>
+              <div class="page-actions">
+                <button id="randomTransitionsBtn" class="primary-btn" disabled>Random Apply Transitions</button>
+              </div>
+            </div>
+            <div class="info-card">
+              <p class="feature-hint">Detects the first 5 transitions already used in the project and reassigns them randomly to every clip, keeping each transition's original duration and settings.</p>
+            </div>
+          </section>
+
+          <!-- ── Export SRT ───────────────────────────────────── -->
+          <section class="page" data-page="export">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Export</p>
+                <h3>Export CapCut's subtitle track as .srt</h3>
+              </div>
+              <div class="page-actions">
+                <button id="exportSrtBtn" class="primary-btn">&#8595; Export .srt</button>
+              </div>
+            </div>
+            <div class="info-card">
+              <p class="feature-hint">Reads CapCut's subtitle (text) track with timings and downloads a timestamped <code>.srt</code> file. This is read-only — your project is not modified.</p>
+            </div>
+          </section>
+
+          <!-- ── Backups ──────────────────────────────────────── -->
+          <section class="page" data-page="backups">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Backups</p>
+                <h3>Safety copies of the whole project</h3>
+              </div>
+              <div class="page-actions">
+                <button id="backupProjectBtn" class="secondary-btn" disabled>Backup Project</button>
+                <button id="restoreBackupBtn" class="secondary-btn danger" disabled>Restore Backup</button>
+              </div>
+            </div>
+            <div class="info-card">
+              <p class="feature-hint">Every editing action already creates an automatic backup first. Use <strong>Backup Project</strong> for a manual snapshot, or <strong>Restore Backup</strong> to roll back to the latest saved copy (a safety backup of the current state is taken before restoring).</p>
+            </div>
+          </section>
+
+          <!-- ── Tools ────────────────────────────────────────── -->
+          <section class="page" data-page="tools">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Tools</p>
+                <h3>CapCut helpers</h3>
+              </div>
+              <div class="page-actions">
+                <button id="clearCacheBtn" class="secondary-btn" disabled>Clear Cache</button>
+                <button id="killCapCutBtn" class="secondary-btn danger">Kill CapCut</button>
+              </div>
+            </div>
+            <div class="info-card">
+              <p class="feature-hint">
+                <strong>Kill CapCut</strong> force-closes CapCut so it releases the project from memory — external edits only
+                show up after a fresh reopen. <strong>Clear Cache</strong> deletes stale <code>.tmp</code>/<code>.bak</code>
+                sidecar files for the selected project (the real draft is never touched). CapCut must be closed for cache clearing.
+              </p>
+            </div>
+          </section>
+
+          <!-- ── Logs ─────────────────────────────────────────── -->
+          <section class="page" data-page="logs">
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">Log Panel</p>
+                <h3>Real-time activity log</h3>
+              </div>
+              <div class="page-actions">
+                <button id="clearLogBtn" class="secondary-btn small-btn">Clear Log</button>
+              </div>
+            </div>
+            <div id="logPanel" class="log-output" aria-live="polite"></div>
+          </section>
         </div>
+
+        <footer class="status-footer">
+          <section id="statusBar" class="status-bar info">Ready.</section>
+        </footer>
       </main>
     </div>
 

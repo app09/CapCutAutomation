@@ -1,7 +1,7 @@
 {
-  "name": "capcut-subtitle-editor",
+  "name": "capcut-automation-studio",
   "version": "1.0.0",
-  "description": "Desktop app for extracting and editing CapCut subtitle text.",
+  "description": "Desktop automation studio for CapCut projects — captions, image/audio sync, motion, transitions, backups.",
   "main": "main.js",
   "author": "Genspark",
   "license": "MIT",
@@ -21,8 +21,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.local.capcutsubtitleeditor",
-    "productName": "CapCut Subtitle Editor",
+    "appId": "com.local.capcutautomationstudio",
+    "productName": "CapCut Automation Studio",
     "asar": true,
     "directories": {
       "output": "dist"
@@ -54,7 +54,7 @@
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "CapCut Subtitle Editor"
+      "shortcutName": "CapCut Automation Studio"
     }
   }
 }

@@ -4,16 +4,20 @@ const elements = {
   applyChangesBtn: document.getElementById('applyChangesBtn'),
   backupProjectBtn: document.getElementById('backupProjectBtn'),
   restoreBackupBtn: document.getElementById('restoreBackupBtn'),
+  clearCacheBtn: document.getElementById('clearCacheBtn'),
+  killCapCutBtn: document.getElementById('killCapCutBtn'),
   downloadTxtBtn: document.getElementById('downloadTxtBtn'),
   uploadTxtInput: document.getElementById('uploadTxtInput'),
   uploadTxtLabel: document.getElementById('uploadTxtLabel'),
   animationPreset: document.getElementById('animationPreset'),
   applyAnimationBtn: document.getElementById('applyAnimationBtn'),
+  randomTransitionsBtn: document.getElementById('randomTransitionsBtn'),
   exportSrtBtn: document.getElementById('exportSrtBtn'),
   syncEditor: document.getElementById('syncEditor'),
   syncUploadInput: document.getElementById('syncUploadInput'),
   syncUploadLabel: document.getElementById('syncUploadLabel'),
   applyImageSyncBtn: document.getElementById('applyImageSyncBtn'),
+  applyAudioSyncBtn: document.getElementById('applyAudioSyncBtn'),
   projectList: document.getElementById('projectList'),
   projectCount: document.getElementById('projectCount'),
   scanInfo: document.getElementById('scanInfo'),
@@ -22,7 +26,15 @@ const elements = {
   captionEditor: document.getElementById('captionEditor'),
   captionCount: document.getElementById('captionCount'),
   backupStatus: document.getElementById('backupStatus'),
-  statusBar: document.getElementById('statusBar')
+  statusBar: document.getElementById('statusBar'),
+  selectedProjectStats: document.getElementById('selectedProjectStats'),
+  statClips: document.getElementById('statClips'),
+  statImages: document.getElementById('statImages'),
+  statVideos: document.getElementById('statVideos'),
+  statAudio: document.getElementById('statAudio'),
+  statDuration: document.getElementById('statDuration'),
+  logPanel: document.getElementById('logPanel'),
+  clearLogBtn: document.getElementById('clearLogBtn')
 };
 
 const state = {
@@ -32,12 +44,46 @@ const state = {
   hasLoadedCaptions: false
 };
 
+const MAX_LOG_ENTRIES = 500;
+
+// Append a color-coded, timestamped entry to the Log Panel.
+function appendLog(level, message, at = Date.now()) {
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${level}`;
+
+  const time = document.createElement('span');
+  time.className = 'log-time';
+  time.textContent = new Date(at).toLocaleTimeString();
+
+  const msg = document.createElement('span');
+  msg.className = 'log-msg';
+  msg.textContent = message;
+
+  entry.appendChild(time);
+  entry.appendChild(msg);
+
+  // Auto-scroll only when the user is already at (or near) the bottom.
+  const nearBottom =
+    elements.logPanel.scrollTop + elements.logPanel.clientHeight >= elements.logPanel.scrollHeight - 24;
+
+  elements.logPanel.appendChild(entry);
+
+  while (elements.logPanel.childElementCount > MAX_LOG_ENTRIES) {
+    elements.logPanel.removeChild(elements.logPanel.firstElementChild);
+  }
+
+  if (nearBottom) {
+    elements.logPanel.scrollTop = elements.logPanel.scrollHeight;
+  }
+}
+
 function setStatus(message, type = 'info') {
   // Mirror every status change to the DevTools console (open with Ctrl+Shift+I).
   const sink = type === 'error' ? console.error : type === 'warning' ? console.warn : console.log;
   sink(`[ui:${type}] ${message}`);
   elements.statusBar.textContent = message;
   elements.statusBar.className = `status-bar ${type}`;
+  appendLog(type, message);
 }
 
 function setFileButtonsEnabled(isEnabled) {
@@ -55,11 +101,13 @@ function setButtonsDisabled(isDisabled) {
   elements.extractCaptionsBtn.disabled = isDisabled;
   elements.backupProjectBtn.disabled = isDisabled;
   elements.restoreBackupBtn.disabled = isDisabled;
+  elements.clearCacheBtn.disabled = isDisabled;
   elements.applyChangesBtn.disabled = isDisabled || !state.hasLoadedCaptions;
 
   // Motion / SRT / Image Sync only require a selected project.
   elements.animationPreset.disabled = isDisabled;
   elements.applyAnimationBtn.disabled = isDisabled;
+  elements.randomTransitionsBtn.disabled = isDisabled;
   elements.exportSrtBtn.disabled = isDisabled;
   updateSyncControls(isDisabled);
 }
@@ -76,6 +124,9 @@ function updateSyncControls(isDisabled) {
   }
 
   elements.applyImageSyncBtn.disabled = projectDisabled || !elements.syncEditor.value.trim();
+  // Audio-Cut Sync only needs a selected project — it reads timing from the
+  // project's own audio track, so no SRT text is required.
+  elements.applyAudioSyncBtn.disabled = projectDisabled;
 }
 
 async function populatePresets() {
@@ -111,12 +162,40 @@ function formatDate(value) {
   }
 }
 
+// CapCut draft durations are in microseconds.
+function formatDuration(durationUs) {
+  if (!(durationUs > 0)) {
+    return '0:00';
+  }
+  const totalSeconds = Math.round(durationUs / 1000000);
+  const s = totalSeconds % 60;
+  const m = Math.floor(totalSeconds / 60) % 60;
+  const h = Math.floor(totalSeconds / 3600);
+  const pad = (v) => String(v).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function renderSelectedStats(stats) {
+  if (!stats) {
+    elements.selectedProjectStats.hidden = true;
+    return;
+  }
+
+  elements.statClips.textContent = `${stats.clipCount} clip${stats.clipCount === 1 ? '' : 's'}`;
+  elements.statImages.textContent = `${stats.imageCount} image${stats.imageCount === 1 ? '' : 's'}`;
+  elements.statVideos.textContent = `${stats.videoCount} video${stats.videoCount === 1 ? '' : 's'}`;
+  elements.statAudio.textContent = `${stats.audioTrackCount} audio track${stats.audioTrackCount === 1 ? '' : 's'}`;
+  elements.statDuration.textContent = `⏱ ${formatDuration(stats.durationUs)}`;
+  elements.selectedProjectStats.hidden = false;
+}
+
 function updateSelection(project) {
   state.selectedProject = project;
 
   if (!project) {
     elements.selectedProjectName.textContent = 'None selected';
     elements.selectedProjectPath.textContent = 'Choose a project from the left panel.';
+    renderSelectedStats(null);
     setButtonsDisabled(true);
     resetEditor();
     renderProjects();
@@ -125,6 +204,7 @@ function updateSelection(project) {
 
   elements.selectedProjectName.textContent = project.name;
   elements.selectedProjectPath.textContent = `${project.path} • ${project.draftFileName}`;
+  renderSelectedStats(project.stats);
   setButtonsDisabled(false);
   resetEditor();
   renderProjects();
@@ -143,10 +223,17 @@ function renderProjects() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `project-card ${state.selectedProject?.path === project.path ? 'selected' : ''}`;
+
+    const s = project.stats;
+    const statsLine = s
+      ? `<div class="project-stats-line">${s.clipCount} clips (${s.imageCount} img / ${s.videoCount} vid) • ${s.audioTrackCount} audio • ${escapeHtml(formatDuration(s.durationUs))}</div>`
+      : '';
+
     button.innerHTML = `
       <span class="project-name">${escapeHtml(project.name)}</span>
       <div class="project-path">${escapeHtml(project.path)}</div>
       <div class="project-meta-line">${project.draftFileName} • Updated ${escapeHtml(formatDate(project.lastModified))}</div>
+      ${statsLine}
       <div class="project-meta-line">${project.backupCount} backup${project.backupCount === 1 ? '' : 's'}</div>
     `;
 
@@ -379,6 +466,34 @@ async function applyAnimation() {
   }
 }
 
+async function applyRandomTransitions() {
+  if (!state.selectedProject) {
+    return;
+  }
+
+  console.log(`[ui] applyRandomTransitions → project="${state.selectedProject.path}"`);
+  setStatus('Detecting leading transitions and applying them randomly to all clips...', 'info');
+
+  try {
+    const result = await window.capcutApi.applyRandomTransitions(
+      state.selectedProject.path,
+      state.selectedProject.draftFileName
+    );
+
+    console.log('[ui] applyRandomTransitions result:', result);
+    elements.backupStatus.textContent = `Latest backup: ${result.backupId}`;
+    setStatus(
+      `Applied ${result.appliedCount} transition${result.appliedCount === 1 ? '' : 's'} randomly ` +
+        `from ${result.detectedCount} detected (${result.detectedNames.join(', ')}). ` +
+        'Reopen the project in CapCut to see them.',
+      'success'
+    );
+    await refreshProjects();
+  } catch (error) {
+    setStatus(error.message || 'Failed to apply random transitions.', 'error');
+  }
+}
+
 async function exportSrt() {
   if (!state.selectedProject) {
     return;
@@ -449,6 +564,89 @@ async function applyImageSync() {
   }
 }
 
+async function killCapCut() {
+  const confirmed = window.confirm(
+    'Force-close CapCut now?\n\nAny unsaved work open in CapCut will be lost. ' +
+      'This releases the project from memory so external edits show up on the next open.'
+  );
+  if (!confirmed) {
+    setStatus('Kill CapCut cancelled.', 'info');
+    return;
+  }
+
+  setStatus('Force-closing CapCut...', 'info');
+
+  try {
+    const result = await window.capcutApi.killCapCut();
+
+    if (!result.wasRunning) {
+      setStatus('CapCut was not running.', 'info');
+    } else if (result.killed) {
+      setStatus('CapCut closed. You can now apply changes and reopen the project fresh.', 'success');
+    } else {
+      setStatus('Could not fully close CapCut — try closing it manually.', 'warning');
+    }
+  } catch (error) {
+    setStatus(error.message || 'Failed to close CapCut.', 'error');
+  }
+}
+
+async function clearCache() {
+  if (!state.selectedProject) {
+    return;
+  }
+
+  setStatus('Clearing stale cache files for the selected project...', 'info');
+
+  try {
+    const result = await window.capcutApi.clearProjectCache(state.selectedProject.path);
+    setStatus(
+      `Cleared ${result.removed} cache file${result.removed === 1 ? '' : 's'} (.tmp/.bak). ` +
+        'Reopen the project in CapCut to load the latest saved timeline.',
+      'success'
+    );
+  } catch (error) {
+    setStatus(error.message || 'Failed to clear cache.', 'error');
+  }
+}
+
+async function applyAudioSync() {
+  if (!state.selectedProject) {
+    return;
+  }
+
+  console.log(`[ui] applyAudioSync → project="${state.selectedProject.path}"`);
+  setStatus('Creating backup and syncing clip durations to the audio cuts...', 'info');
+
+  try {
+    const result = await window.capcutApi.audioSync(
+      state.selectedProject.path,
+      state.selectedProject.draftFileName
+    );
+
+    console.log('[ui] applyAudioSync result:', result);
+    elements.backupStatus.textContent = `Latest backup: ${result.backupId}`;
+
+    if (result.cueCount !== result.clipCount) {
+      setStatus(
+        `Synced ${result.syncedCount} clip${result.syncedCount === 1 ? '' : 's'} to the audio cuts. ` +
+          `Note: ${result.cueCount} audio cut${result.cueCount === 1 ? '' : 's'} vs ${result.clipCount} clip${result.clipCount === 1 ? '' : 's'} — extras were left in sequence. ` +
+          'Reopen the project in CapCut to see it.',
+        'warning'
+      );
+    } else {
+      setStatus(
+        `Synced ${result.syncedCount} clip${result.syncedCount === 1 ? '' : 's'} to the audio cuts. Reopen the project in CapCut to see it.`,
+        'success'
+      );
+    }
+
+    await refreshProjects();
+  } catch (error) {
+    setStatus(error.message || 'Failed to sync clips to audio cuts.', 'error');
+  }
+}
+
 function uploadSrtFile(event) {
   const file = event.target.files?.[0];
   event.target.value = '';
@@ -480,13 +678,41 @@ elements.extractCaptionsBtn.addEventListener('click', extractCaptions);
 elements.applyChangesBtn.addEventListener('click', applyChanges);
 elements.backupProjectBtn.addEventListener('click', backupProject);
 elements.restoreBackupBtn.addEventListener('click', restoreBackup);
+elements.clearCacheBtn.addEventListener('click', clearCache);
+elements.killCapCutBtn.addEventListener('click', killCapCut);
 elements.downloadTxtBtn.addEventListener('click', downloadCaptions);
 elements.uploadTxtInput.addEventListener('change', uploadCaptions);
 elements.applyAnimationBtn.addEventListener('click', applyAnimation);
+elements.randomTransitionsBtn.addEventListener('click', applyRandomTransitions);
 elements.exportSrtBtn.addEventListener('click', exportSrt);
 elements.applyImageSyncBtn.addEventListener('click', applyImageSync);
+elements.applyAudioSyncBtn.addEventListener('click', applyAudioSync);
 elements.syncUploadInput.addEventListener('change', uploadSrtFile);
 elements.syncEditor.addEventListener('input', () => updateSyncControls(false));
+elements.clearLogBtn.addEventListener('click', () => {
+  elements.logPanel.innerHTML = '';
+  appendLog('info', 'Log cleared.');
+});
 
+// ── Page navigation ─────────────────────────────────────────
+// Each function lives on its own page; the tab bar toggles which is visible.
+const navTabs = Array.from(document.querySelectorAll('.nav-tab'));
+const pages = Array.from(document.querySelectorAll('.page'));
+
+function switchPage(pageId) {
+  navTabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.page === pageId));
+  pages.forEach((page) => page.classList.toggle('active', page.dataset.page === pageId));
+}
+
+navTabs.forEach((tab) => {
+  tab.addEventListener('click', () => switchPage(tab.dataset.page));
+});
+
+// Stream main-process activity ([ipc]/[service] lines) into the Log Panel.
+window.capcutApi.onLog((entry) => {
+  appendLog(entry.level, entry.message, entry.at);
+});
+
+appendLog('info', 'App started. Ready.');
 populatePresets();
 refreshProjects();
